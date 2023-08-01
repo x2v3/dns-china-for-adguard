@@ -2,6 +2,7 @@ import requests
 import zipfile
 import os
 import logging
+import datetime
 
 temp_dir = './temp'
 source_zip = 'https://github.com/felixonmars/dnsmasq-china-list/archive/refs/heads/master.zip'
@@ -41,9 +42,23 @@ def convert_conf_files(temp_dir, artifacts_dir):
     logging.info('Done')
 
 
+# find the line starting with "Last updated on" and update it
+def update_readme():
+    file = open('../README.md', 'r')
+    lines = file.readlines()
+    file.close()
+    file = open('../README.md', 'w')
+    for line in lines:
+        if line.startswith('Last updated on'):
+            file.write('Last updated on: ' + str(datetime.datetime.now()) + '\n')
+        else:
+            file.write(line)
+
+
 def main():
     download_and_unzip(source_zip, temp_dir)
     convert_conf_files(temp_dir, artifacts_dir)
+    update_readme()
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
