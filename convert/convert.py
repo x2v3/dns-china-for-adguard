@@ -3,10 +3,12 @@ import zipfile
 import os
 import logging
 import datetime
+import re
 
 temp_dir = './temp'
 source_zip = 'https://github.com/felixonmars/dnsmasq-china-list/archive/refs/heads/master.zip'
 artifacts_dir = '..'
+
 
 def download_and_unzip(source_zip, temp_dir):
     logging.info('Downloading and unzipping...')
@@ -22,10 +24,11 @@ def download_and_unzip(source_zip, temp_dir):
     logging.info(f'Done, files are in {temp_dir}')
     return temp_dir
 
+
 # the conf file content lines is in the format of : server=/example.com/114.114.114.114
 # we need to convert it to : [/example.com/]114.114.114.114
-def convert_conf_files(temp_dir, artifacts_dir):
-    logging.info('Converting...')
+def convert_conf_files(temp_dir: str, artifacts_dir: str, content_handler: callable(str)):
+    logging.info('Converting conf files...')
     if not os.path.exists(artifacts_dir):
         logging.info('Creating artifacts directory...')
         os.makedirs(artifacts_dir)
@@ -35,11 +38,28 @@ def convert_conf_files(temp_dir, artifacts_dir):
         if file.endswith('.conf'):
             with open(f'{temp_dir}/dnsmasq-china-list-master/{file}', 'r') as f:
                 content = f.read()
-                content = content.replace('/', '/]')
-                content = content.replace('server=/]', '[/')
+                content = content_handler(content)
                 with open(f'{artifacts_dir}/{file}', 'w') as f:
                     f.write(content)
     logging.info('Done')
+
+
+def convert_to_aghome_conf(temp_dir, artifacts_dir):
+    def ag_content_handler(content: str):
+        content = content.replace('/', '/]')
+        content = content.replace('server=/]', '[/')
+        return content
+
+    return convert_conf_files(temp_dir, artifacts_dir, ag_content_handler)
+
+
+def convert_to_smartdns_conf(temp_dir, artifacts_dir):
+    def smartdns_content_handler(content: str):
+        content = content.replace('server=/', '')
+        content = re.sub('\/(\d+\.){3}\d+', '', content)
+        return content
+
+    return convert_conf_files(temp_dir, artifacts_dir, smartdns_content_handler)
 
 
 # find the line starting with "Last updated on" and update it
@@ -57,8 +77,10 @@ def update_readme():
 
 def main():
     download_and_unzip(source_zip, temp_dir)
-    convert_conf_files(temp_dir, artifacts_dir)
+    convert_to_aghome_conf(temp_dir, '%s/%s' % (artifacts_dir, 'adguard'))
+    convert_to_smartdns_conf(temp_dir, '%s/%s' % (artifacts_dir, 'smartdns'))
     update_readme()
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
