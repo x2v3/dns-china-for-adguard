@@ -1,6 +1,6 @@
 # dns-china-for-adguard
 
-Last updated on: 2025-02-19 00:23:25.351167
+Last updated on: 2025-02-20 00:23:31.551800
 
 ## how to use
 
